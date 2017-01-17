@@ -1,0 +1,170 @@
+#ifndef MORPH_CIRCLE_H
+#define MORPH_CIRCLE_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <float.h>
+#include <cmath>
+
+#include "loewner_declaration.h"
+#include "morph_color_matrix.h"
+
+#ifndef KAPPA
+#define KAPPA 0.707106781186547
+#endif
+
+#define N_MAPPING 10
+
+#define NEWTON_EPSILON 1e-4
+#define MAX_NEWTON_ITERATIONS 10000
+#define NEWTON_ITERATIONS 4
+
+/* 
+ *================================================================================================================
+ * Class representing a circle used in algorithm for solving smallest enclosing circle of circles problem.
+ * It contains mathods for conversion to MorphColorMatrix object using different approaches, with or without
+ * mapping the point from unit sphere to the m-hcl bi-cone described in the paper from B. Burgeth and A. Kleefeld.
+ * 
+ * AUTHOR: Filip Srnec
+ * VERSION: 1.0
+ *================================================================================================================
+ */
+class LoewnerMorphology::MorphCircle {
+	public:
+		double x;        // x coordinate of the centre
+		double y;        // y coordinate of the centre
+		double r;        // radius
+
+		/*
+	         * Constructs a MorphCircle with given centre (x, y) and radius r.
+	   	 */
+		MorphCircle(double x = 0, double y = 0, double r = 0) : x(x), y(y), r(r) {}
+		
+		/*
+	  	 * Construct a MorphCircle from given MorphColorMatrix object (see "morph_color_matrix.h")
+		 * using formula:
+		 * 
+		 *	x = 2 * KAPPA * b
+		 *	y = KAPPA * (c - a)
+		 *	r = KAPPA * (c + a)
+		 *
+		 * where (x, y) is a centre of newly constructed MorphCircle, r is a radius of MorphCircle and a, b and c be elements of given MorphColorMatrix ([a, b; b, c]).
+		 */
+		MorphCircle(const LoewnerMorphology::MorphColorMatrix &m);
+
+		/*
+	 	 * Performes basic conversion from MorphCircle to MorphColorMatrix without additional mapping.
+	 	 * Conversion is performed using following formulas:
+		 * 	
+		 *      a = KAPPA * (z - y)
+                 *      b = KAPPA * x
+                 *      c = KAPPA * (z + y)
+                 *
+                 * where (x, y) is a centre of this MorphCircle, r is a radius of MorphCircle and a, b and c be elements of new MorphColorMatrix ([a, b; b, c]).
+		 */
+		LoewnerMorphology::MorphColorMatrix toMorphColorMatrix();
+		
+		/*
+		 * Converts this MorphCircle to MorphColorMatrix using mapping from the unit sphere to the bi-cone from Theorem 4.1
+		 * of the paper from B. Burgeth and A. Kleefeld.
+		 */
+		LoewnerMorphology::MorphColorMatrix toMorphColorMatrixCone1();
+	
+		/*
+		 * Converts this MorphCircle to MorphColorMatrix using mapping from the unit sphere to the bi-cone from Theorem 4.4 from the paper of B. Burgeth and A. Kleefeld
+		 * using Newton method with predifined number of iterations (constant NEWTON_ITERATIONS) for finding the root of the polynomial introduced in the paper.
+		 */
+		LoewnerMorphology::MorphColorMatrix toMorphColorMatrixCone2();
+		
+		/*
+		 * Converts this MorphCircle to MorphColorMatrix using mapping from the unit sphere to the bi-cone from Theorem 4.4 from the paper of B. Burgeth and A. Kleefeld
+		 * using Newton method with predfined epsilon constant (NEWTON_EPSILON) with predifined maximum number of iteration (NAX_NEWTON_ITERATIONS) for finding the root
+		 * of the polynomial introduced in the paper.
+		 */
+		LoewnerMorphology::MorphColorMatrix toMorphColorMatrixCone2Epsilon();
+		
+		/*
+		 * Converts tihs MorphCircle to MorphColorMatrix using mapping from bi-cone to the sphere from Corollary 4.3 from the paper of B. Burgeth and A. Kleefeld.
+		 */
+		LoewnerMorphology::MorphColorMatrix toMorphColorMatrixSphere();
+		
+		/*
+		 * Prints this MorphCircle to the standard output in format '(x, y, r)'.
+		 */
+		void print();
+		
+		/*
+		 * Resizes the radius of this MorphCircle.
+		 */
+		LoewnerMorphology::MorphCircle& resizeRadius(double r) { this->r = r; return *this; }
+		
+		/*
+		 * Prepares this MorphCircle for calculating the maximum MorphCircle as described in paragraph 3 from the paper of B. Burgeth and A. Kleefeld.
+		 */
+		LoewnerMorphology::MorphCircle& prepareMax();
+		
+		/*
+		 * Prepares this MorphCircle for calculating the minimum MorphCircle as discribed in paragraph 3 from the paper of B. Burgeth and A. Kleefeld.
+		 */
+		LoewnerMorphology::MorphCircle& prepareMin();
+		
+
+		/*
+		 * Returns this MorphCircle in regular state after calculating the maximum MorphCircle as discrbed in paragraph 3 from the paper of B. Burgeth and A. Kleefeld
+		 */
+		LoewnerMorphology::MorphCircle& returnMax();
+
+
+		/*
+		 * Returns this MorphCircle in regular state after calculating the maximum MorphCircle as discrbed in paragraph 3 from the paper of B. Burgeth and A. Kleefeld
+		 */
+		LoewnerMorphology::MorphCircle& returnMin();
+		
+		/* 
+		 * Checks if this MorphCircle corresponds to a point on the bi-cone.
+		 */
+		bool checkIfInCone();
+		
+		/*
+		 * Prints x-coordinates of the center of all MorphCircle objects from the given matrix of MorphCircle objects.
+		 */
+		static void printMatrixX(LoewnerMorphology::MorphCircle *matrix, int width, int height, int lda);
+		
+		/*
+		 * Prints y-coordinates of the center of all MorphCircle objects from the given matrix of MorphCircle objects.
+		 */
+		static void printMatrixY(LoewnerMorphology::MorphCircle *matrix, int width, int height, int lda);
+		
+		/*
+		 * Prints radii of all MorphCircle objects from the given matrix of MorphCircle objects.
+		 */
+		static void printMatrixR(LoewnerMorphology::MorphCircle *matrix, int width, int height, int lda);
+	
+	private:
+		/*
+		 * Factory method that converts MorphCircle defined by given coordinates and radius to MorphColorMatrix object.
+		 */
+		static LoewnerMorphology::MorphColorMatrix inline toMorphColorMatrixFromCoordinates(double x, double y, double r);
+		
+		/*
+		 * Computes lambda function introduced in paragraph 4 (2) from the paper of B. Burgeth and A. Kleefeld.
+		 */
+		double computeLambda();
+		
+		/*
+		 * Evaluates the polynomial introduced in theorem 4.2 from the paper of B. Burgeth and A. Kleefeld (mi^11 - mi^10 + 1 - lambda).
+		 * in given point mi and with given lambda.
+		 */
+		static double computeFunction(double mi, double lambda);
+		
+		/*
+                 * Evaluates the derivation of the polynomial introduced in theorem 4.2 from the paper of B. Burgeth and A. Kleefeld (11 * mi^10 -10 *  mi^9).
+                 * in given point mi.
+                 */
+		static double computeDerivation(double mi);
+
+};
+
+#endif
+
